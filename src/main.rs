@@ -22,6 +22,7 @@ fn draw_square(x: i16, y: i16, w: u16, (r,g,b): (u8, u8, u8), screen: &sdl::vide
 }
 
 fn draw_num(n: u8, x: i16, y: i16, size: u16, screen: &sdl::video::Surface) {
+    let mut n = n;
     let sub = (size-1) as i16/3;
     let pack = (size as i16-sub*3)as i16/2;
     let color = if n == 1 {
@@ -37,40 +38,42 @@ fn draw_num(n: u8, x: i16, y: i16, size: u16, screen: &sdl::video::Surface) {
     }else if n == 6 {
         (0,255,255)
     }else if n == 7 {
-        (255,255,255)
+        (0,0,0)
     }else {
         (150,150,150)
     };
     
     loop {
-        if n == 1{
+        if n == 0 {break;}
+        else if n == 1{
             draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color, screen);
+            break;
         }else if n == 2{
-            draw_square(x+pack, y+pack, sub as u16-1,  (255,0, 0), screen);
+            draw_square(x+pack, y+pack, sub as u16-1,  color, screen);
             draw_square(sub*2+x+pack, sub*2+y+pack, sub as u16-1, color, screen);
+            break;
         }else if n == 3{
-            draw_num(1, x, y, size, screen);
-            draw_num(2, x, y, size, screen);
+            draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color, screen);
+            n = 2;
         }else if n == 4{
-            draw_num(2, x, y, size, screen);
             draw_square(x+pack, sub*2+y+pack, sub as u16-1, color, screen);
             draw_square(sub*2+x+pack, y+pack, sub as u16-1, color, screen);
+            n = 2;
         }else if n == 5{
-            draw_num(4, x, y, size, screen);
-            draw_num(1, x, y, size, screen);
+            draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color, screen);
+            n = 4;
         }else if n == 6{
-            draw_num(4, x, y, size, screen);
             draw_square(x+pack, sub+y+pack, sub as u16-1, color, screen);
             draw_square(sub*2+x+pack, sub+y+pack, sub as u16-1, color, screen);
+            n = 4;
         }else if n == 7{
-            draw_num(1, x, y, size, screen);
-            draw_num(6, x, y, size, screen);
+            draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color, screen);
+            n = 6;
         }else if n == 8{
-            draw_num(6, x, y, size, screen);
             draw_square(sub+x+pack, y+pack, sub as u16-1, color, screen);
             draw_square(sub+x+pack, sub*2+y+pack, sub as u16-1, color, screen);
+            n = 6;
         }
-        break;
     }
 }
 
@@ -121,9 +124,9 @@ fn count_field(x: usize, y: usize, field: &Vec<Vec<bool>>) -> u8 {
 }
 
 fn main() {
-    const WIDTH: usize = 40;
-    const HEIGHT: usize = 30;
-    const SIZE: usize = 25;
+    const WIDTH: usize = 30;
+    const HEIGHT: usize = 20;
+    const SIZE: usize = 35;
 
     let field = &mut vec![vec![false; WIDTH]; HEIGHT];
 
