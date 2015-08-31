@@ -5,4 +5,4 @@ authors = ["gustavo <gbuschle@hotmail.com>"]
 
 [dependencies]
 sdl = "*"
-random = "*"
+rand = "*"
