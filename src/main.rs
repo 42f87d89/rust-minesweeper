@@ -1,7 +1,7 @@
 extern crate sdl;
 extern crate rand;
 
-use rand::distribuitions::{IndependentSample, Range};
+use rand::distributions::{IndependentSample, Range};
 use sdl::video::{SurfaceFlag, VideoFlag, Color};
 use sdl::event::{Event, Key};
 
@@ -110,10 +110,10 @@ fn flip_field(ref mut field: &mut Vec<Vec<bool>>, x: i16, y: i16, size: i16) {
 }
 
 fn random_field(r: f32, field: &mut Vec<Vec<bool>>) {
-    let bt = Range::new(0.,1);
-    let mut rng = rang::thread_rng();
+    let bt = Range::new(0.,1.);
+    let mut rng = rand::thread_rng();
     field.iter().map(|x| {x.map(|y| {       
-        if rn%1 > bt.ind_sample(&mut rng) {
+        if bt.ind_sample(&mut rng) < r {
             true
         }else{
             false
