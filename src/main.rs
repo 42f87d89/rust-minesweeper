@@ -112,15 +112,15 @@ fn flip_field(ref mut field: &mut Vec<Vec<bool>>, x: i16, y: i16, size: i16) {
 fn random_field(r: f32, field: &mut Vec<Vec<bool>>) {
     let bt = Range::new(0.,1.);
     let mut rng = rand::thread_rng();
-    field.iter().map(|x| {x.map(|y| {       
-        if bt.ind_sample(&mut rng) < r {
-            true
-        }else{
-            false
+    for i in 0..field.len() {
+        for j in 0..field[0].len() {
+            if bt.ind_sample(&mut rng) < r {
+                field[i][j] = true;
+            }else{
+                field[i][j] = false;
+            }
         }
-        
-    })});
-    let rng = rand::thread_rng();
+    }
 }
 
 fn count_field(x: usize, y: usize, field: &Vec<Vec<bool>>) -> u8 {
@@ -152,12 +152,18 @@ fn main() {
             Event::MouseButton(_, down, mx, my) => {
                 if down {
                     flip_field(field, my as i16, mx as i16, SIZE as i16);
-                    println!("{}", count_field((mx/SIZE as u16) as usize, (my/SIZE as u16) as usize, field));
                 }
             },
-            Event::Key(k, _, _, _)
-                if k == Key::Escape
-                    => break,
+            Event::Key(k, down, _, _) => {
+                if down {
+                    if k == Key::Escape {
+                        break;
+                    }
+                    if k == Key::R {
+                        random_field(0.1, field);
+                    }
+                }
+            }
             _ => {}
         }
         draw_field(&field, SIZE as i16, &screen);
