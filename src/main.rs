@@ -134,7 +134,7 @@ fn draw_field(ref field: &Vec<Vec<(bool,bool,bool)>>,
     }
 }
 
-fn flip_field(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
+fn make_mine(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
     let i = (x/size) as usize;
     let j = (y/size) as usize;
     let (h, mine, f) = field[i][j];
@@ -155,18 +155,22 @@ fn random_field(r: f32, field: &mut Vec<Vec<(bool,bool,bool)>>) {
     }
 }
 
-fn show_field(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
+fn show_spot(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
     let i = (x/size) as usize;
     let j = (y/size) as usize;
-    let (hidden, m, f) = field[i][j];
-    field[i][j] = (!hidden, m, f);
+    let (_, m, flag) = field[i][j];
+    if !flag {
+        field[i][j] = (false, m, flag);
+    }
 }
 
-fn flag_field(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
+fn flag_spot(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
     let i = (x/size) as usize;
     let j = (y/size) as usize;
-    let (h, m, flag) = field[i][j];
-    field[i][j] = (h, m, !flag);
+    let (hidden, m, flag) = field[i][j];
+    if hidden {
+        field[i][j] = (hidden, m, !flag);
+    }
 }
 
 fn count_field(x: usize, y: usize, field: &Vec<Vec<(bool,bool,bool)>>) -> u8 {
@@ -198,10 +202,10 @@ fn main() {
             Event::MouseButton(b, down, mx, my) => {
                 if down {
                     if b == Mouse::Left {
-                        show_field(field, my as i16, mx as i16, SIZE as i16);
+                        show_spot(field, my as i16, mx as i16, SIZE as i16);
                     }
                     else if b == Mouse::Right {
-                        flag_field(field, my as i16, mx as i16, SIZE as i16);
+                        flag_spot(field, my as i16, mx as i16, SIZE as i16);
                     }
                 }
             },
