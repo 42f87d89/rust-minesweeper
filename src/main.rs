@@ -3,7 +3,7 @@ extern crate rand;
 
 use rand::distributions::{IndependentSample, Range};
 use sdl::video::{SurfaceFlag, VideoFlag, Color};
-use sdl::event::{Event, Key};
+use sdl::event::{Event, Key, Mouse};
 
 fn init(screen_width: isize, screen_height: isize) -> sdl::video::Surface {
     sdl::init(&[sdl::InitFlag::Video]);
@@ -23,6 +23,12 @@ fn draw_square(x: i16, y: i16, w: u16, (r,g,b): (u8, u8, u8), screen: &sdl::vide
 }
 
 fn draw_num(n: u8, x: i16, y: i16, size: u16, screen: &sdl::video::Surface) {
+    draw_square(x,
+        y,
+        size,
+        (255, 255, 255),
+        screen
+    );
     let mut n = n;
     let sub = (size-1) as i16/3;
     let pack = (size as i16-sub*3)as i16/2;
@@ -78,24 +84,49 @@ fn draw_num(n: u8, x: i16, y: i16, size: u16, screen: &sdl::video::Surface) {
     }
 }
 
-fn draw_field(ref field: &Vec<Vec<bool>>, length: i16, screen: &sdl::video::Surface) {
+fn draw_field(ref field: &Vec<Vec<(bool,bool,bool)>>,
+              length: i16,
+              screen: &sdl::video::Surface) {
     let mut n = 0;
     for ref i in field.iter() {
         let mut m = 0;
-        for ref j in i.iter() {
-            draw_square(m*length+1,
-                      n*length+1,
-                      (length-1) as u16,
-                      if **j {(0, 0, 0)} else {(255, 255, 255)},
-                      screen
-            );
-            if !**j{
-                draw_num(
-                    count_field(m as usize, n as usize, field),
-                    m as i16*length as i16+1,
-                    n as i16*length as i16+1,
+        for ref sq in i.iter() {
+            let hidden = sq.0;
+            let mine = sq.1;
+            let flag = sq.2;
+
+            if hidden {
+                draw_square(m*length+1,
+                    n*length+1,
                     (length-1) as u16,
-                    screen);
+                    (180, 180, 180),
+                    screen
+                );
+                if flag {
+                    draw_square(m*length+4,
+                        n*length+4,
+                        (length-7) as u16,
+                        (255, 0, 0),
+                        screen
+                    );
+                }
+            }else{
+                if mine {
+                    draw_square(m*length+1,
+                        n*length+1,
+                        (length-1) as u16,
+                        (0, 0, 0),
+                        screen
+                    );
+                }else{
+                    draw_num(
+                        count_field(m as usize, n as usize, field),
+                        m as i16*length as i16+1,
+                        n as i16*length as i16+1,
+                        (length-1) as u16,
+                        screen
+                    );
+                }
             }
             m += 1;
         }
@@ -103,27 +134,42 @@ fn draw_field(ref field: &Vec<Vec<bool>>, length: i16, screen: &sdl::video::Surf
     }
 }
 
-fn flip_field(ref mut field: &mut Vec<Vec<bool>>, x: i16, y: i16, size: i16) {
+fn flip_field(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
     let i = (x/size) as usize;
     let j = (y/size) as usize;
-    field[i][j] = !(field[i][j]);
+    let (h, mine, f) = field[i][j];
+    field[i][j] = (h, !mine, f);
 }
 
-fn random_field(r: f32, field: &mut Vec<Vec<bool>>) {
+fn random_field(r: f32, field: &mut Vec<Vec<(bool,bool,bool)>>) {
     let bt = Range::new(0.,1.);
     let mut rng = rand::thread_rng();
     for i in 0..field.len() {
         for j in 0..field[0].len() {
             if bt.ind_sample(&mut rng) < r {
-                field[i][j] = true;
+                field[i][j] = (true, true, false);
             }else{
-                field[i][j] = false;
+                field[i][j] = (true, false, false);
             }
         }
     }
 }
 
-fn count_field(x: usize, y: usize, field: &Vec<Vec<bool>>) -> u8 {
+fn show_field(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
+    let i = (x/size) as usize;
+    let j = (y/size) as usize;
+    let (hidden, m, f) = field[i][j];
+    field[i][j] = (!hidden, m, f);
+}
+
+fn flag_field(ref mut field: &mut Vec<Vec<(bool,bool,bool)>>, x: i16, y: i16, size: i16) {
+    let i = (x/size) as usize;
+    let j = (y/size) as usize;
+    let (h, m, flag) = field[i][j];
+    field[i][j] = (h, m, !flag);
+}
+
+fn count_field(x: usize, y: usize, field: &Vec<Vec<(bool,bool,bool)>>) -> u8 {
     let w = field[0].len();
     let h = field.len();
     let mut n = 0;
@@ -132,7 +178,7 @@ fn count_field(x: usize, y: usize, field: &Vec<Vec<bool>>) -> u8 {
         for j in 0..3 {
             if i == 1 && j == 1 {continue;}
             if x+j == 0 || x+j == w+1 {continue;}
-            if field[y+i-1][x+j-1] {n += 1}
+            if field[y+i-1][x+j-1].1 {n += 1}
         }
     }
     n
@@ -143,15 +189,20 @@ fn main() {
     const HEIGHT: usize = 20;
     const SIZE: usize = 35;
 
-    let field = &mut vec![vec![false; WIDTH]; HEIGHT];
+    let field = &mut vec![vec![(true, false, false); WIDTH]; HEIGHT];
 
     let screen = init((SIZE*WIDTH) as isize + 1, (SIZE*HEIGHT) as isize + 1);
     loop {
         match sdl::event::poll_event() {
             Event::Quit => break,
-            Event::MouseButton(_, down, mx, my) => {
+            Event::MouseButton(b, down, mx, my) => {
                 if down {
-                    flip_field(field, my as i16, mx as i16, SIZE as i16);
+                    if b == Mouse::Left {
+                        show_field(field, my as i16, mx as i16, SIZE as i16);
+                    }
+                    else if b == Mouse::Right {
+                        flag_field(field, my as i16, mx as i16, SIZE as i16);
+                    }
                 }
             },
             Event::Key(k, down, _, _) => {
