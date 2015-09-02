@@ -12,7 +12,7 @@ struct Spot {
     hidden: bool,
     mine: bool,
     flag: bool,
-    //n: i8;
+    n: i8,
 }
 
 struct Field {
@@ -26,13 +26,13 @@ impl Field {
         //TODO: make it so the field isn't rebuilt
         let bt = Range::new(0.,1.);
         let mut rng = rand::thread_rng();
-        let mut field = vec![vec![Spot{hidden:false,mine:false,flag:false}; w]; h];
+        let mut field = vec![vec![Spot{hidden:false,mine:false,flag:false,n:0}; w]; h];
         for i in 0..h {
             for j in 0..w {
                 if bt.ind_sample(&mut rng) < r {
-                    field[i][j] = Spot{hidden: true, mine: true, flag: false};
+                    field[i][j] = Spot{hidden: true, mine: true, flag: false, n: 0};
                 }else{
-                    field[i][j] = Spot{hidden: true, mine: false, flag: false};
+                    field[i][j] = Spot{hidden: true, mine: false, flag: false, n: 0};
                 }
             }
         }
@@ -69,7 +69,7 @@ impl Field {
         }
     }
 
-    fn count_field(self, x: usize, y: usize) -> u8 {
+    fn count_field(&self, x: usize, y: usize) -> u8 {
         let mut n = 0;
         for i in 0..3 {
             if y+i == 0 || y+i == self.height+1 {continue;}
@@ -83,32 +83,32 @@ impl Field {
     }
 }
 
-struct Screen<'a> {
+struct Screen {
     width: isize,
     height: isize,
     spot_length: usize,
-    surface: & 'a sdl::video::Surface,
+    surface: sdl::video::Surface,
 }
 
-impl <'a>Screen<'a> {
-    fn new(w: isize, h: isize, l: usize) -> Screen<'a> {
+impl Screen {
+    fn new(w: isize, h: isize, l: usize) -> Screen {
         sdl::init(&[sdl::InitFlag::Video]);
         sdl::wm::set_caption("mines", "mines");
 
         let s = match sdl::video::set_video_mode(w, h, 32,
                                                  &[SurfaceFlag::HWSurface],
                                                  &[VideoFlag::DoubleBuf]) {
-            Ok(s) => &s,
+            Ok(s) => s,
             Err(err) => panic!("failed to set video mode: {}", err)
         };
         Screen {width: w, height: h, spot_length: l, surface: s}
     }
 
-    fn draw_square(self, x: i16, y: i16, w: u16, (r,g,b): (u8, u8, u8)) {
+    fn draw_square(&self, x: i16, y: i16, w: u16, (r,g,b): (u8, u8, u8)) {
         self.surface.fill_rect(Some(sdl::Rect {x: x, y: y, w: w, h: w}), Color::RGB(r, g, b));
     }
 
-    fn draw_num(self, n: u8, x: i16, y: i16, size: u16) {
+    fn draw_num(&self, n: u8, x: i16, y: i16, size: u16) {
         self.draw_square(x, y, size,
             (255, 255, 255)
         );
@@ -166,7 +166,7 @@ impl <'a>Screen<'a> {
             }
         }
     }
-    fn draw_field(self, length: i16, field: Field) {
+    fn draw_field(&self, length: i16, ref field: &Field) {
         let mut n = 0;
         for ref i in field.field.iter() {
             let mut m = 0;
@@ -242,7 +242,7 @@ fn main() {
             },
             _ => {}
         }
-        screen.draw_field(SIZE as i16, field);
+        screen.draw_field(SIZE as i16, &field);
         screen.surface.flip();
     }
 
