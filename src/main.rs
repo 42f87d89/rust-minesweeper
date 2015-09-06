@@ -41,23 +41,39 @@ impl Field {
     }
 
     fn swap_mine(&mut self, x: usize, y: usize) {
-        let f = self.field[y][x];
-        self.field[y][x].mine = !f.mine;
+        let f = &mut self.field[y][x];
+        f.mine = !f.mine;
     }
 
     fn show_spot(&mut self, x: usize, y: usize) {
-        if x > self.width {return;}
-        if y > self.height {return;}
-        let f = self.field[y][x];
-        if !f.flag {
-            self.field[y as usize][x as usize].hidden = false;
+        if x >= self.width {return;}
+        if y >= self.height {return;}
+        {
+            let f = &mut self.field[y][x];
+            if f.flag {return;}
+            if f.hidden {
+                f.hidden = false;
+                return;
+            }
+        }
+        if self.field[y][x].n != self.count_flags(x, y) {return;}
+        for i in 0..3 {
+            if x+i == 0 || x+i > self.width {continue;}
+            for j in 0..3 {
+                if y+j == 0 || y+j > self.height {continue;}
+                if i ==1 && j == 1 {continue;}
+                let f = self.field[y+j-1][x+i-1];
+                if f.hidden {
+                    self.show_spot(x+i-1, y+j-1);
+                }
+            }
         }
     }
 
     fn flag_spot(&mut self, x: usize, y: usize) {
-        let f = self.field[y][x];
+        let f = &mut self.field[y][x];
         if f.hidden {
-            self.field[y][x].flag = !f.flag;
+            f.flag = !f.flag;
         }
     }
 
@@ -74,8 +90,8 @@ impl Field {
         for i in 0..3 {
             if x+i == 0 || x+i > self.width {continue;}
             for j in 0..3 {
-                if i == 1 && j == 1 {continue;}
                 if y+j == 0 || y+j > self.height {continue;}
+                if i == 1 && j == 1 {continue;}
                 if self.field[y+j-1][x+i-1].mine {n += 1}
             }
         }
@@ -85,11 +101,11 @@ impl Field {
     fn count_flags(&self, x: usize, y: usize) -> u8 {
         let mut n = 0;
         for i in 0..3 {
-            if y+i == 0 || y+i == self.height+1 {continue;}
+            if x+i == 0 || x+i > self.height {continue;}
             for j in 0..3 {
+                if y+j == 0 || y+j > self.height {continue;}
                 if i == 1 && j == 1 {continue;}
-                if x+j == 0 || x+j == self.width+1 {continue;}
-                if self.field[y+i-1][x+j-1].flag {n += 1}
+                if self.field[y+j-1][x+i-1].flag {n += 1}
             }
         }
         n
@@ -233,7 +249,8 @@ fn main() {
 
     let mut field = Field::new(R, WIDTH, HEIGHT);
 
-    let screen = Screen::new((SIZE*WIDTH) as isize + 1, (SIZE*HEIGHT) as isize + 1, SIZE as u16);
+    let screen = Screen::new((SIZE*WIDTH) as isize + 1,
+                             (SIZE*HEIGHT) as isize + 1, SIZE as u16);
 
     loop {
         match sdl::event::poll_event() {
