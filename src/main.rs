@@ -7,12 +7,10 @@ use sdl::event::{Event, Key, Mouse};
 
 #[derive(Copy, Clone)]
 struct Spot {
-    //x: usize,
-    //y: usize,
     hidden: bool,
     mine: bool,
     flag: bool,
-    n: i8,
+    n: u8,
 }
 
 struct Field {
@@ -23,60 +21,75 @@ struct Field {
 
 impl Field {
     fn new(r: f32, w: usize, h: usize) -> Field {
-        //TODO: make it so the field isn't rebuilt
         let bt = Range::new(0.,1.);
         let mut rng = rand::thread_rng();
-        let mut field = vec![vec![Spot{hidden:false,mine:false,flag:false,n:0}; w]; h];
+        let mut field = Vec::with_capacity(h);
         for i in 0..h {
-            for j in 0..w {
-                if bt.ind_sample(&mut rng) < r {
-                    field[i][j] = Spot{hidden: true, mine: true, flag: false, n: 0};
-                }else{
-                    field[i][j] = Spot{hidden: true, mine: false, flag: false, n: 0};
-                }
+            field.push(Vec::with_capacity(w));
+            for _ in 0..w {
+                field[i].push(
+                    Spot{hidden: true,
+                         mine: bt.ind_sample(&mut rng) < r,
+                         flag: false,
+                         n: 0}
+                );
             }
         }
-        Field {width: w, height: h, field: field}
+        let mut f = Field {width: w, height: h, field: field};
+        f.count_field();
+        f
     }
 
     fn swap_mine(&mut self, x: usize, y: usize) {
-        let f = self.field[x][y];
-        self.field[x][y].mine = !f.mine;
+        let f = self.field[y][x];
+        self.field[y][x].mine = !f.mine;
     }
 
     fn show_spot(&mut self, x: usize, y: usize) {
-        let f = self.field[x][y];
-        if !f.hidden {
-            for i in 0..3{
-                for j in 0..3{
-                    if i == 0 && j == 0 {continue;}
-                    if x+i == 0 || x+i>self.width {continue;}
-                    if y+j == 0 || y+j>self.height {continue;}
-                    println!("{} {}", x, y);
-                    self.show_spot(x+i-1, y+j-1);
-                }
-            }
-        }
-        if !f.flag {
-            self.field[x][y].hidden = false;
+        if x > self.width {return;}
+        if y > self.height {return;}
+        let f = self.field[y][x];
+    if !f.flag {
+            self.field[y as usize][x as usize].hidden = false;
         }
     }
 
     fn flag_spot(&mut self, x: usize, y: usize) {
-        let f = self.field[x][y];
+        let f = self.field[y][x];
         if f.hidden {
-            self.field[x][y].flag = !f.flag;
+            self.field[y][x].flag = !f.flag;
         }
     }
 
-    fn count_field(&self, x: usize, y: usize) -> u8 {
+    fn count_field(&mut self) {
+        for i in 0..self.width {
+            for j in 0..self.height {
+                self.field[j][i].n = self.count_neighbors(i, j);
+            }
+        }
+    }
+
+    fn count_neighbors(&self, x: usize, y: usize) -> u8 {
+        let mut n = 0;
+        for i in 0..3 {
+            if x+i == 0 || x+i > self.width {continue;}
+            for j in 0..3 {
+                if i == 1 && j == 1 {continue;}
+                if y+j == 0 || y+j > self.height {continue;}
+                if self.field[y+j-1][x+i-1].mine {n += 1}
+            }
+        }
+        n
+    }
+
+    fn count_flags(&self, x: usize, y: usize) -> u8 {
         let mut n = 0;
         for i in 0..3 {
             if y+i == 0 || y+i == self.height+1 {continue;}
             for j in 0..3 {
                 if i == 1 && j == 1 {continue;}
                 if x+j == 0 || x+j == self.width+1 {continue;}
-                if self.field[y+i-1][x+j-1].mine {n += 1}
+                if self.field[y+i-1][x+j-1].flag {n += 1}
             }
         }
         n
@@ -86,12 +99,12 @@ impl Field {
 struct Screen {
     width: isize,
     height: isize,
-    spot_length: usize,
+    spot_length: u16,
     surface: sdl::video::Surface,
 }
 
 impl Screen {
-    fn new(w: isize, h: isize, l: usize) -> Screen {
+    fn new(w: isize, h: isize, l: u16) -> Screen {
         sdl::init(&[sdl::InitFlag::Video]);
         sdl::wm::set_caption("mines", "mines");
 
@@ -104,17 +117,17 @@ impl Screen {
         Screen {width: w, height: h, spot_length: l, surface: s}
     }
 
-    fn draw_square(&self, x: i16, y: i16, w: u16, (r,g,b): (u8, u8, u8)) {
-        self.surface.fill_rect(Some(sdl::Rect {x: x, y: y, w: w, h: w}), Color::RGB(r, g, b));
+    fn draw_square(&self, x: u16, y: u16, w: u16, (r,g,b): (u8, u8, u8)) {
+        self.surface.fill_rect(Some(sdl::Rect {x: x as i16, y: y as i16, w: w, h: w}), Color::RGB(r, g, b));
     }
 
-    fn draw_num(&self, n: u8, x: i16, y: i16, size: u16) {
-        self.draw_square(x, y, size,
+    fn draw_num(&self, n: u8, x: u16, y: u16) {
+        self.draw_square(x, y, self.spot_length-1,
             (255, 255, 255)
         );
         let mut n = n;
-        let sub = (size-1) as i16/3;
-        let pack = (size as i16-sub*3)as i16/2;
+        let sub = self.spot_length-1/3;
+        let pack = self.spot_length-sub*3/2;
         let color = if n == 1 {
             (100,100,255)
         }else if n == 2 {
@@ -136,37 +149,38 @@ impl Screen {
         loop {
             if n == 0 {break;}
             else if n == 1{
-                self.draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color);
+                self.draw_square(sub+x+pack, sub+y+pack, sub-1, color);
                 break;
             }else if n == 2{
-                self.draw_square(x+pack, y+pack, sub as u16-1,  color);
-                self.draw_square(sub*2+x+pack, sub*2+y+pack, sub as u16-1, color);
+                self.draw_square(x+pack, y+pack, sub-1,  color);
+                self.draw_square(sub*2+x+pack, sub*2+y+pack, sub-1, color);
                 break;
             }else if n == 3{
-                self.draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color);
+                self.draw_square(sub+x+pack, sub+y+pack, sub-1, color);
                 n = 2;
             }else if n == 4{
-                self.draw_square(x+pack, sub*2+y+pack, sub as u16-1, color);
-                self.draw_square(sub*2+x+pack, y+pack, sub as u16-1, color);
+                self.draw_square(x+pack, sub*2+y+pack, sub-1, color);
+                self.draw_square(sub*2+x+pack, y+pack, sub-1, color);
                 n = 2;
             }else if n == 5{
-                self.draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color);
+                self.draw_square(sub+x+pack, sub+y+pack, sub-1, color);
                 n = 4;
             }else if n == 6{
-                self.draw_square(x+pack, sub+y+pack, sub as u16-1, color);
-                self.draw_square(sub*2+x+pack, sub+y+pack, sub as u16-1, color);
+                self.draw_square(x+pack, sub+y+pack, sub-1, color);
+                self.draw_square(sub*2+x+pack, sub+y+pack, sub-1, color);
                 n = 4;
             }else if n == 7{
-                self.draw_square(sub+x+pack, sub+y+pack, sub as u16-1, color);
+                self.draw_square(sub+x+pack, sub+y+pack, sub-1, color);
                 n = 6;
             }else if n == 8{
-                self.draw_square(sub+x+pack, y+pack, sub as u16-1, color);
-                self.draw_square(sub+x+pack, sub*2+y+pack, sub as u16-1, color);
+                self.draw_square(sub+x+pack, y+pack, sub-1, color);
+                self.draw_square(sub+x+pack, sub*2+y+pack, sub-1, color);
                 n = 6;
             }
         }
     }
-    fn draw_field(&self, length: i16, ref field: &Field) {
+    fn draw_field(&self, ref field: &Field) {
+        let length = self.spot_length;
         let mut n = 0;
         for ref i in field.field.iter() {
             let mut m = 0;
@@ -174,29 +188,28 @@ impl Screen {
                 if sq.hidden {
                     self.draw_square(m*length+1,
                         n*length+1,
-                        (length-1) as u16,
+                        length-1,
                         (180, 180, 180)
                     );
                     if sq.flag {
                         self.draw_square(m*length+4,
                             n*length+4,
-                            (length-7) as u16,
+                            length-7,
                             (255, 0, 0)
                         );
                     }
                 }else{
                     if sq.mine {
-                        self.draw_square(m*length+1,
+                        self.draw_square({println!("asd");m*length+1},
                             n*length+1,
-                            (length-1) as u16,
+                            length-1,
                             (0, 0, 0)
                         );
                     }else{
                         self.draw_num(
-                            field.count_field(m as usize, n as usize),
-                            m as i16*length as i16+1,
-                            n as i16*length as i16+1,
-                            (length-1) as u16
+                            sq.n,
+                            m*length+1,
+                            n*length+1
                         );
                     }
                 }
@@ -212,10 +225,11 @@ fn main() {
     const WIDTH: usize = 30;
     const HEIGHT: usize = 20;
     const SIZE: usize = 35;
+    const R: f32 = 0.;
 
-    let mut field = Field::new(0.1, WIDTH, HEIGHT);
+    let mut field = Field::new(R, WIDTH, HEIGHT);
 
-    let screen = Screen::new((SIZE*WIDTH) as isize + 1, (SIZE*HEIGHT) as isize + 1, SIZE);
+    let screen = Screen::new((SIZE*WIDTH) as isize + 1, (SIZE*HEIGHT) as isize + 1, SIZE as u16);
 
     loop {
         match sdl::event::poll_event() {
@@ -223,10 +237,10 @@ fn main() {
             Event::MouseButton(b, down, mx, my) => {
                 if down {
                     if b == Mouse::Left {
-                        field.show_spot(my as usize/SIZE, mx as usize/SIZE);
+                        field.show_spot(mx as usize/SIZE, my as usize/SIZE);
                     }
                     else if b == Mouse::Right {
-                        field.flag_spot(my as usize/SIZE, mx as usize/SIZE);
+                        field.flag_spot(mx as usize/SIZE, my as usize/SIZE);
                     }
                 }
             },
@@ -236,13 +250,13 @@ fn main() {
                         break;
                     }
                     if k == Key::R {
-                        field = Field::new(0.1, WIDTH, HEIGHT);
+                        field = Field::new(R, WIDTH, HEIGHT);
                     }
                 }
             },
             _ => {}
         }
-        screen.draw_field(SIZE as i16, &field);
+        screen.draw_field(&field);
         screen.surface.flip();
     }
 
