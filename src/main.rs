@@ -49,7 +49,7 @@ impl Field {
         if x > self.width {return;}
         if y > self.height {return;}
         let f = self.field[y][x];
-    if !f.flag {
+        if !f.flag {
             self.field[y as usize][x as usize].hidden = false;
         }
     }
@@ -118,7 +118,10 @@ impl Screen {
     }
 
     fn draw_square(&self, x: u16, y: u16, w: u16, (r,g,b): (u8, u8, u8)) {
-        self.surface.fill_rect(Some(sdl::Rect {x: x as i16, y: y as i16, w: w, h: w}), Color::RGB(r, g, b));
+        self.surface.fill_rect(
+            Some(sdl::Rect {x: x as i16, y: y as i16, w: w, h: w}),
+            Color::RGB(r, g, b)
+        );
     }
 
     fn draw_num(&self, n: u8, x: u16, y: u16) {
@@ -126,8 +129,8 @@ impl Screen {
             (255, 255, 255)
         );
         let mut n = n;
-        let sub = self.spot_length-1/3;
-        let pack = self.spot_length-sub*3/2;
+        let sub = (self.spot_length-1)/3;
+        let pack = (self.spot_length - sub*3)/2;
         let color = if n == 1 {
             (100,100,255)
         }else if n == 2 {
@@ -179,6 +182,7 @@ impl Screen {
             }
         }
     }
+
     fn draw_field(&self, ref field: &Field) {
         let length = self.spot_length;
         let mut n = 0;
@@ -200,7 +204,7 @@ impl Screen {
                     }
                 }else{
                     if sq.mine {
-                        self.draw_square({println!("asd");m*length+1},
+                        self.draw_square(m*length+1,
                             n*length+1,
                             length-1,
                             (0, 0, 0)
@@ -225,7 +229,7 @@ fn main() {
     const WIDTH: usize = 30;
     const HEIGHT: usize = 20;
     const SIZE: usize = 35;
-    const R: f32 = 0.;
+    const R: f32 = 0.1;
 
     let mut field = Field::new(R, WIDTH, HEIGHT);
 
