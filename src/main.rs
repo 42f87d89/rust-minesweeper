@@ -101,7 +101,7 @@ impl Field {
     fn count_flags(&self, x: usize, y: usize) -> u8 {
         let mut n = 0;
         for i in 0..3 {
-            if x+i == 0 || x+i > self.height {continue;}
+            if x+i == 0 || x+i > self.width {continue;}
             for j in 0..3 {
                 if y+j == 0 || y+j > self.height {continue;}
                 if i == 1 && j == 1 {continue;}
@@ -245,7 +245,7 @@ fn main() {
     const WIDTH: usize = 30;
     const HEIGHT: usize = 20;
     const SIZE: usize = 35;
-    const R: f32 = 0.1;
+    const R: f32 = 0.18;
 
     let mut field = Field::new(R, WIDTH, HEIGHT);
 
