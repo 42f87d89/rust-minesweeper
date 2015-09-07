@@ -253,7 +253,7 @@ fn main() {
                              (SIZE*HEIGHT) as isize + 1, SIZE as u16);
 
     loop {
-        match sdl::event::poll_event() {
+        match sdl::event::wait_event() {
             Event::Quit => break,
             Event::MouseButton(b, down, mx, my) => {
                 if down {
