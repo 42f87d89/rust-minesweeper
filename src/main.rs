@@ -53,7 +53,6 @@ impl Field {
             if f.flag {return;}
             if f.hidden {
                 f.hidden = false;
-                return;
             }
         }
         if self.field[y][x].n != self.count_flags(x, y) {return;}
@@ -245,7 +244,7 @@ fn main() {
     const WIDTH: usize = 30;
     const HEIGHT: usize = 20;
     const SIZE: usize = 35;
-    const R: f32 = 0.18;
+    const R: f32 = 0.185;
 
     let mut field = Field::new(R, WIDTH, HEIGHT);
 
