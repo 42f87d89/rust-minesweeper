@@ -14,13 +14,14 @@ struct Spot {
 }
 
 struct Field {
+    empty: bool,
     width: usize,
     height: usize,
     field: Vec<Vec<Spot>>,
 }
 
 impl Field {
-    fn new(r: f32, w: usize, h: usize) -> Field {
+    fn new(r: f32, w: usize, h: usize, x: usize, y: usize) -> Field {
         let bt = Range::new(0.,1.);
         let mut rng = rand::thread_rng();
         let mut field = Vec::with_capacity(h);
@@ -35,9 +36,18 @@ impl Field {
                 );
             }
         }
-        let mut f = Field {width: w, height: h, field: field};
+        let mut f = Field {empty: false, width: w, height: h, field: field};
         f.count_field();
+        if f.field[y][x].n != 0 || f.field[y][x].mine {
+            f = Field::new(r, w, h, x, y)
+        }
         f
+    }
+
+    fn empty(w: usize, h: usize) -> Field {
+        Field {empty: true, width: w, height: h,
+               field: vec![vec![Spot {hidden: true, mine: false, flag: false, n: 0}; h]; w]
+        }
     }
 
     fn swap_mine(&mut self, x: usize, y: usize) {
@@ -244,9 +254,9 @@ fn main() {
     const WIDTH: usize = 30;
     const HEIGHT: usize = 20;
     const SIZE: usize = 35;
-    const R: f32 = 0.185;
+    const R: f32 = 0.2;
 
-    let mut field = Field::new(R, WIDTH, HEIGHT);
+    let mut field = Field::empty(WIDTH, HEIGHT);
 
     let screen = Screen::new((SIZE*WIDTH) as isize + 1,
                              (SIZE*HEIGHT) as isize + 1, SIZE as u16);
@@ -256,11 +266,17 @@ fn main() {
             Event::Quit => break,
             Event::MouseButton(b, down, mx, my) => {
                 if down {
+                    let x = mx as usize/SIZE;
+                    let y = my as usize/SIZE;
                     if b == Mouse::Left {
-                        field.show_spot(mx as usize/SIZE, my as usize/SIZE);
+                        if field.empty {
+                            field = Field::new(R, WIDTH, HEIGHT, x, y);
+                        }
+                        field.show_spot(x ,y);
+                        
                     }
                     else if b == Mouse::Right {
-                        field.flag_spot(mx as usize/SIZE, my as usize/SIZE);
+                        field.flag_spot(x, y);
                     }
                 }
             },
@@ -270,7 +286,7 @@ fn main() {
                         break;
                     }
                     if k == Key::R {
-                        field = Field::new(R, WIDTH, HEIGHT);
+                        field = Field::empty(WIDTH, HEIGHT);
                     }
                 }
             },
