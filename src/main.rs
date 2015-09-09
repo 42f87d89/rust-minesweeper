@@ -46,7 +46,7 @@ impl Field {
 
     fn empty(w: usize, h: usize) -> Field {
         Field {empty: true, width: w, height: h,
-               field: vec![vec![Spot {hidden: true, mine: false, flag: false, n: 0}; h]; w]
+               field: vec![vec![Spot {hidden: true, mine: false, flag: false, n: 0}; w]; h]
         }
     }
 
